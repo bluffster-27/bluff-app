@@ -1,0 +1,41 @@
+workflows:
+  ios-workflow:
+    name: iOS Build
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Codemagic
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.bluffster.game
+      vars:
+        BUNDLE_ID: "com.bluffster.game"
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm install
+          npm install @capacitor/core @capacitor/ios @capacitor/cli
+      - name: Copy web assets
+        script: |
+          mkdir -p www
+          cp index.html www/
+          npx cap init Bluff com.bluffster.game --web-dir www
+          npx cap add ios
+          npx cap sync ios
+      - name: Build iOS
+        script: |
+          xcode-project use-profiles
+          xcodebuild -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath build/App.xcarchive \
+            archive
+          xcodebuild -exportArchive \
+            -archivePath build/App.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist /Users/builder/export_options.plist
+    artifacts:
+      - build/export/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
